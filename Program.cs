@@ -17,27 +17,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var books = new List<Book>
-{
-    new Book
-    {
-        Id = 1,
-        Title = "Book 1",
-        Author = "Author 1"
-    },
-    new Book
-    {
-        Id = 2,
-        Title = "Book 2",
-        Author = "Author 2"
-    },
-    new Book
-    {
-        Id = 3,
-        Title = "Book 3",
-        Author = "Author 3"
-    },
-};
+var books = new Books();
+books.AddBook(new BookRequest("Book 1", "Author 1"));
+books.AddBook(new BookRequest("Book 2", "Author 2"));
+books.AddBook(new BookRequest("Book 3", "Author 3"));
 
 app.MapGet(
     "/book",
@@ -54,7 +37,7 @@ app.MapGet(
     "/book/{id}",
     (int id) =>
     {
-        var book = books.Find(book => book.Id == id);
+        var book = books[id];
 
         if (book == null)
             return Results.NotFound("Book not found");
@@ -65,23 +48,21 @@ app.MapGet(
 
 app.MapPost(
     "/book",
-    (Book book) =>
+    (BookRequest book) =>
     {
-        books.Add(book);
+        books.AddBook(book);
         return Results.Ok(books);
     }
 );
 
 app.MapPut(
-    "/book",
-    (Book updatedBook) =>
+    "/book/{id}",
+    (int id, BookRequest updatedBook) =>
     {
-        var foundBook = books.Find(book => book.Id == updatedBook.Id);
-        if (foundBook == null)
+        if (!books.indexInRange(id))
             return Results.NotFound("Book not found");
 
-        books.Remove(foundBook);
-        books.Add(updatedBook);
+        books[id] = new ListedBook(id, updatedBook);
 
         return Results.Ok(books);
     }
@@ -91,7 +72,10 @@ app.MapDelete(
     "/book/{id}",
     (int id) =>
     {
-        books.RemoveAll(book => book.Id == id);
+        if (!books.indexInRange(id))
+            return Results.NotFound("Book not found");
+        books.RemoveAt(id);
+        return Results.Ok(books);
     }
 );
 
